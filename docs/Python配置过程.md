@@ -1,10 +1,7 @@
-
----
-
 # RepairAgent Python 环境配置与依赖安装日志
 
 **系统环境**：WSL2 Ubuntu (默认自带 Python 3.14)
-**最终目标**：构建 Python 3.11 专属环境，并解决复杂的依赖冲突。
+**最终目标**：构建 Python 3.11 专属环境，并解决复杂的依赖冲突，确保 100% 开源合规。
 **记录时间**：2026-11-09
 
 ---
@@ -34,16 +31,21 @@ bash Miniconda3-latest-Linux-x86_64.sh -b -u
 source ~/.bashrc
 ```
 
-### 2. 解决 Conda ToS（服务条款）拦截
+### 2. 解决 Conda ToS（服务条款）与合规化改造
 - **报错**：`CondaToSNonInteractiveError: Terms of Service have not been accepted`。
-- **解决**：运行以下命令接受条款（*注：个人与学术科研使用完全免费，无商业限制*）。
+- **原因**：Anaconda 对其官方的 `defaults` 频道增加了商业使用限制。
+- **合规化解决**：彻底移除官方源，改用社区驱动的 `conda-forge`，并强制设置 `nodefaults`。
 ```bash
-conda tos accept
+conda config --remove-key channels
+conda config --add channels conda-forge
+conda config --append channels nodefaults
 ```
+*(验证 `~/.condarc` 文件中只包含上述配置，即可完全规避商业条款限制)*
 
 ### 3. 创建 Python 3.11 环境
+强制使用 `--override-channels` 覆盖所有潜在配置，确保彻底断开官方源：
 ```bash
-conda create -n repairagent python=3.11 -y
+conda create -n repairagent python=3.11 -c conda-forge --override-channels -y
 conda activate repairagent
 ```
 *(注：激活后必须确认 `python --version` 输出 3.11.x)*
@@ -59,14 +61,14 @@ conda activate repairagent
 - **Git 克隆失败**：`auto-gpt-plugin-template` 使用 `ghproxy.net` 代理时报 `exit code: 128`。**解决**：更换为 `https://githubproxy.cc/` 代理，并在前缀后加上 GitHub 原链接，最终成功通过代理拉取。
 
 ### 2. 彻底锁死版本（最终决胜方案）
-在 `requirements-core.txt` 中**强制锁定**以下版本，彻底掐断冲突的可能。
+在 `requirements-core.txt` 中**强制锁定**特定版本，彻底掐断冲突的可能，并生成了最终的 `requirements-lock.txt`。
 
 ### 3. 最终安装命令
 使用阿里云镜像加速，并使用虚拟环境内的 `python -m pip` 进行安装。
 ```bash
-python -m pip install -r requirements-core.txt -i https://mirrors.aliyun.com/pypi/simple/
+python -m pip install -r requirements-lock.txt -i https://mirrors.aliyun.com/pypi/simple/
 ```
-*(注：安装成功后，可能会提示 `wheel 0.48.0 requires packaging>=24.0` 的红色警告，这是无害的，直接无视即可。)*
+*(注：安装成功后，可能会提示 `wheel 0.48.0 requires packaging>=24.0` 的红色警告，这是因为锁死了老版 `packaging`，此为无害警告，直接无视即可。)*
 
 ---
 
